@@ -7,11 +7,11 @@ Render URL:
 Spring Boot로 만든 게시판이다. 게시글 CRUD와 파일 업로드·다운로드 코드를 분석하고, 화면 수정과 이미지 미리보기를 추가하는 과제이다.
 
 - GitHub Classroom: https://github.com/2026-2-WebService/assign11-c01-22100159
-- 사용 기술: Java 18, Spring Boot 3.5.7, Thymeleaf, JPA, MariaDB
+- 사용 기술: Java 17, Spring Boot 3.5.7, Thymeleaf, JPA, MariaDB
 
 ## Installation
 
-JDK 18과 MariaDB를 준비하고 DB를 생성한다.
+JDK 17과 MariaDB를 준비하고 DB를 생성한다.
 
 ```sql
 CREATE DATABASE web11 CHARACTER SET utf8mb4;
