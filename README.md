@@ -4,7 +4,7 @@ Render URL:
 
 ## Project Information
 
-Spring Boot로 만든 게시판이다. 게시글 CRUD와 파일 업로드·다운로드 코드를 분석하고, 화면 수정과 이미지 미리보기를 추가하는 과제이다.
+Spring Boot로 만든 게시판이다. 게시글 CRUD와 파일 업로드·다운로드 코드를 분석하고, 화면을 수정하고 이미지 미리보기를 추가했다.
 
 - GitHub Classroom: https://github.com/2026-2-WebService/assign11-c01-22100159
 - 사용 기술: Java 17, Spring Boot 3.5.7, Thymeleaf, JPA, MariaDB
@@ -31,7 +31,13 @@ IntelliJ의 실행 설정에 환경변수를 넣고 `AttachmentBoardApplication`
 ./gradlew bootRun
 ```
 
-접속 주소는 http://localhost:8080/posts 이다. 실제 업로드 파일과 DB 비밀번호는 Git에 올리지 않는다.
+접속 주소는 http://localhost:8080/posts 이다. 실제 파일은 `uploads/`에 저장하고, 파일 정보는 MariaDB의 `attachments` 테이블에 저장한다. 실제 업로드 파일과 DB 비밀번호는 Git에 올리지 않는다.
+
+Gradle Wrapper는 8.14.3을 사용한다. 실행 파일은 아래 명령어로 빌드한다.
+
+```bash
+./gradlew clean bootJar
+```
 
 ## Source Code Exploration
 
@@ -113,13 +119,19 @@ Controller는 사용자의 요청을 처리하고, Service는 비즈니스 로�
 
 `AttachmentController.view()`에 `/attachments/{id}/view` 경로를 추가했다. JPG·JPEG, PNG, GIF의 MIME 타입만 허용하고, `inline`과 파일의 Content-Type을 지정해 이미지를 반환한다.
 
-`detail.html`에서는 `th:if`로 이미지인지 검사한 뒤 `<img>`로 표시한다. 이미지가 아닌 파일은 기존 다운로드 버튼을 사용한다. 잘못된 첨부파일 ID와 실제 파일이 없는 경우는 404, 미리보기를 지원하지 않는 타입은 415로 처리한다.
+`src/main/resources/templates/posts/detail.html`에서는 `th:if`로 이미지인지 검사한 뒤 `<img>`로 표시한다. 이미지가 아닌 파일은 기존 다운로드 버튼을 사용한다. `AttachmentController.view()`는 없는 첨부파일 ID를 404로 처리하고, `FileStorageService.load()`는 디스크에 파일이 없으면 404로 처리한다. 미리보기를 지원하지 않는 타입은 415로 처리한다.
 
 ## Testing & Deployment
 
-컴파일, DB 연결, 게시글 작성·조회, JPG 업로드와 브라우저의 다운로드 완료 표시를 확인했다. `uploads`의 UUID 파일명과 DB의 원본 이름·저장 이름·게시글 ID도 확인했다.
+로컬에서 확인한 내용이다.
 
-게시글 삭제 후 목록에서 사라지는 것을 확인했다. 이미지 미리보기와 없는 첨부파일 ID의 404 응답을 확인했다. 이미지 응답의 내용도 저장된 파일과 일치했다. 이미지가 아닌 파일의 다운로드·열기와 게시글 수정 후 첨부파일 유지도 직접 확인했다.
+- `./gradlew clean bootJar` 빌드 성공
+- DB 연결과 게시글 작성·조회·수정·삭제
+- JPG 업로드와 다운로드 완료
+- `uploads`의 UUID 파일명과 DB의 원본 이름·저장 이름·게시글 ID
+- 상세 화면의 이미지 미리보기와 저장 파일·응답 내용 일치
+- 이미지가 아닌 파일의 다운로드·열기, 수정 후 첨부파일 유지
+- 없는 첨부파일 ID 요청의 404 응답
 
 ### 초기 화면
 
@@ -139,6 +151,10 @@ Controller는 사용자의 요청을 처리하고, Service는 비즈니스 로�
 
 ### 배포
 
+Classroom 저장소의 `main` 브랜치에 소스와 캡처를 Push했다. `Dockerfile`은 Java 17 환경에서 JAR를 빌드하고 실행한다. Render에도 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`를 환경변수로 설정한다.
+
+Render 재배포 결과와 배포 환경의 기능 동작은 아직 확인하지 못했다.
+
 ## Weekly Review
 
 ### 새롭게 배운 내용
@@ -149,8 +165,10 @@ Controller는 사용자의 요청을 처리하고, Service는 비즈니스 로�
 
 ### 어려웠던 점과 해결 방법
 
-`MultipartFile`에 제목과 내용도 포함되는 줄 알았는데, 코드를 보면서 파일만 받는다는 것을 알았다. DB 레코드 삭제와 실제 파일 삭제도 같은 작업인 줄 알았지만, 삭제 메서드를 따라가며 구분했다.
+`MultipartFile`에 제목과 내용도 포함되는 줄 알았는데, 코드를 보면서 파일만 받는다는 것을 알았다. DB 레코드 삭제와 실제 파일 삭제도 같은 작업인 줄 알았지만, 삭제 메서드를 따라가며 구분했다. Render 빌드에서는 Java 18을 요구하는 코드와 Java 17 Docker 환경이 맞지 않는 오류가 있었다. Java 17로 맞춘 코드를 제출 저장소에 반영하고 로컬 빌드를 확인했다.
 
 ### AI 활용 내용 및 느낀 점
 
-AI의 질문과 힌트를 보며 코드를 읽고 직접 답했다. 환경 확인과 오류 해결에 도움을 받았고, 내가 답한 내용을 README로 정리하도록 요청했다.
+AI의 질문과 힌트를 보며 코드를 읽고 직접 답했다. 주석과 미리보기 코드를 설명받고 직접 적용했다. 환경 설정, 오류 해결, 테스트와 Git 병합에도 도움을 받았고, 내가 답한 내용을 README로 정리하도록 요청했다.
+
+직접 코드를 따라가니 파일 저장과 DB 저장이 다른 작업이라는 점이 이해됐다.
