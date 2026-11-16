@@ -88,19 +88,39 @@ Controller는 사용자의 요청을 처리하고, Service는 비즈니스 로�
 
 ### 코드 주석
 
+- `PostController.create()`: 입력값 검증, 파일 전달, 저장 후 화면 이동
+- `FileStorageService.store()`: 파일 검증, UUID 이름과 경로 생성, 파일 저장과 실패 처리
+- `AttachmentController.download()`: 파일 조회, 다운로드 헤더와 응답 구성
+
 ## Customizing
 
 ### Text
 
+`src/main/resources/templates/posts/list.html`에서 탭 제목과 게시판 제목을 “자료 공유 게시판”에서 “업로드를 해볼까요~~~?”로 바꿨다.
+
 ### Style
+
+`src/main/resources/static/css/app.css`에서 배경색을 `#f5f7fb`에서 주황색 `#FF7710`으로 바꿨다.
 
 ### UI/Data
 
+`src/main/resources/templates/posts/detail.html`에서 파일명과 크기 옆에 MIME 타입도 표시하도록 바꿨다. `file.contentType`을 사용했고 `ms-2`로 간격을 줬다.
+
+변경 전은 아래 초기 화면과 업로드 캡처에서 볼 수 있다.
+
+![변경 후 배경색과 파일 타입](results/05_customizing.png)
+
 ## New Feature
+
+`AttachmentController.view()`에 `/attachments/{id}/view` 경로를 추가했다. JPG·JPEG, PNG, GIF의 MIME 타입만 허용하고, `inline`과 파일의 Content-Type을 지정해 이미지를 반환한다.
+
+`detail.html`에서는 `th:if`로 이미지인지 검사한 뒤 `<img>`로 표시한다. 이미지가 아닌 파일은 기존 다운로드 버튼을 사용한다. 잘못된 첨부파일 ID와 실제 파일이 없는 경우는 404, 미리보기를 지원하지 않는 타입은 415로 처리한다.
 
 ## Testing & Deployment
 
 컴파일, DB 연결, 게시글 작성·조회, JPG 업로드와 브라우저의 다운로드 완료 표시를 확인했다. `uploads`의 UUID 파일명과 DB의 원본 이름·저장 이름·게시글 ID도 확인했다.
+
+이미지 미리보기와 없는 첨부파일 ID의 404 응답을 확인했다. 이미지 응답의 내용도 저장된 파일과 일치했다. 이미지가 아닌 파일의 다운로드·열기와 게시글 수정 후 첨부파일 유지도 직접 확인했다.
 
 ### 초기 화면
 
@@ -115,6 +135,8 @@ Controller는 사용자의 요청을 처리하고, Service는 비즈니스 로�
 ![다운로드 완료](results/03_download.png)
 
 ### 이미지 미리보기
+
+![이미지 미리보기](results/04_preview.png)
 
 ### 배포
 
