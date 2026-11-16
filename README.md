@@ -1,36 +1,135 @@
-# Week 11 — Attachment Board (Student Sample)
+# 11주차 파일 첨부 게시판
 
-Spring Boot + Thymeleaf + JPA + MariaDB: 게시글 CRUD / 다중 첨부파일 업로드 / 다운로드
+Render URL:
 
-## 실행하기
-1. Java 17+ 및 MariaDB 준비, `CREATE DATABASE web11 CHARACTER SET utf8mb4;`
-2. 환경변수 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`를 자신의 MariaDB에 맞게 설정. 기본값은 `jdbc:mariadb://localhost:3306/web11`, `webuser`, `webpass`.
-3. Gradle이 설치된 환경: `gradle bootRun` / IntelliJ: `AttachmentBoardApplication.main()` 실행.
-4. 접속: http://localhost:8080/posts
+## Project Information
 
-> Gradle Wrapper는 이 ZIP에 포함되어 있지 않습니다. IntelliJ의 Gradle 지원 또는 설치된 Gradle을 사용하세요. `gradle wrapper` 실행 후 생성된 wrapper 파일은 Git에 포함하는 것을 권장합니다.
+Spring Boot로 만든 게시판이다. 게시글 CRUD와 파일 업로드·다운로드 코드를 분석하고, 화면 수정과 이미지 미리보기를 추가하는 과제이다.
 
-## 구현된 기능
-- 게시글 목록 / 생성 / 상세 / 수정 / 삭제
-- 게시글 생성 시 여러 파일 선택, UUID 이름으로 `uploads/`에 저장
-- `attachments` 테이블에 메타데이터 저장
-- 첨부파일 다운로드 (`GET /attachments/{id}/download`)
+- GitHub: https://github.com/lingard09/week11-attachment-board
+- Classroom 제출 저장소:
+- 사용 기술: Java 18, Spring Boot 3.5.7, Thymeleaf, JPA, MariaDB
 
-## 학생 과제 (TODO)
-1. 코드를 분석하여 업로드/다운로드 요청 흐름 정리
-2. 화면이나 정보 표시 3곳 이상 수정
-3. **이미지 미리보기** 구현: `GET /attachments/{id}/view` + 상세 화면 `<img>` 표시. 이미지(jpg/jpeg/png/gif)만 허용하고 `Content-Type` 정확히 설정
-4. 정상/오류 테스트 후 README 및 Weekly Review 작성
+## Installation
 
-## 코드 위치
-- `PostController`: 게시글 화면 / Form
-- `AttachmentController`: 다운로드 + 미리보기 TODO
-- `PostService`: JPA CRUD와 파일 저장 연결
-- `FileStorageService`: 파일 검증 / UUID 저장 / 로드
-- `Post`, `Attachment`: 1:N 관계
-- `templates/posts/detail.html`: 미리보기 TODO
+JDK 18과 MariaDB를 준비하고 DB를 생성한다.
 
-## 주의사항
-- 학습용 프로젝트입니다. 로그인/접근 권한, 업로드 파일의 실제 바이트 검증, 악성 파일 검사, CSRF 보호, 파일 저장과 DB 트랜잭션의 완전한 일관성 보장 등은 구현하지 않았습니다. 인터넷 공개 배포 전에 보강이 필요합니다.
-- `spring.jpa.hibernate.ddl-auto=update`는 학습용 설정이며 운영 DB에는 그대로 사용하지 않습니다.
-- Render 기본 파일 시스템에 저장된 업로드 파일은 재시작/재배포 시 유지되지 않을 수 있습니다. 이번 과제는 **로컬 파일 처리**를 평가합니다.
+```sql
+CREATE DATABASE web11 CHARACTER SET utf8mb4;
+```
+
+실행 환경에 다음 값을 설정한다.
+
+- `DB_URL`: DB 주소. 예: `jdbc:mariadb://localhost:3306/web11`
+- `DB_USERNAME`: DB 계정
+- `DB_PASSWORD`: DB 비밀번호
+- `UPLOAD_DIR`: 파일 저장 폴더. 기본값 `uploads`
+- `PORT`: 서버 포트. 기본값 `8080`
+
+IntelliJ의 실행 설정에 환경변수를 넣고 `AttachmentBoardApplication`을 실행한다. 터미널에서는 환경변수를 따로 설정한 뒤 아래 명령어를 실행한다.
+
+```bash
+./gradlew bootRun
+```
+
+접속 주소는 http://localhost:8080/posts 이다. 실제 업로드 파일과 DB 비밀번호는 Git에 올리지 않는다.
+
+## Source Code Exploration
+
+아래 Java 파일 경로는 `src/main/java/edu/handong/web11/` 기준이다.
+
+### 1. Controller, Service, Repository의 역할
+
+Controller는 사용자의 요청을 처리하고, Service는 비즈니스 로직을 담당하며, Repository는 DB 접근을 담당한다. 목록 조회는 `PostController.list()` → `PostService.all()` → `PostRepository.findAll(Sort)` 순서로 진행된다.
+
+관련 파일: `controller/PostController.java`, `service/PostService.java`, `repository/PostRepository.java`
+
+### 2. 폼 입력값과 첨부파일 전달
+
+폼은 POST 방식과 `multipart/form-data` 형식으로 데이터를 보낸다. `PostController.create()`는 `@ModelAttribute`로 제목과 내용을 `PostForm form`에 받고, `@RequestParam(name = "files")`로 첨부파일을 `List<MultipartFile> files`에 받는다.
+
+관련 파일: `src/main/resources/templates/posts/form.html`, `controller/PostController.java`, `dto/PostForm.java`
+
+### 3. Post와 Attachment의 관계
+
+게시글 하나에 여러 첨부파일이 올라갈 수 있으므로 일대다 관계이다. `Post`의 `@OneToMany`는 첨부파일 목록을 연결하고, `Attachment`의 `@ManyToOne`은 각 첨부파일이 속한 게시글을 연결한다. `Post.addAttachment()`는 양쪽에 이 관계를 설정한다.
+
+관련 파일: `domain/Post.java`, `domain/Attachment.java`
+
+### 4. cascade와 orphanRemoval
+
+`cascade = CascadeType.ALL`은 게시글의 저장·삭제 등의 작업을 첨부파일 엔티티에도 전파한다. `orphanRemoval = true`는 목록에서 제거되어 게시글과의 관계가 끊어진 첨부파일의 DB 레코드를 삭제한다. 실제 파일은 별도로 관리되므로, `PostService.delete()`에서 `FileStorageService.deleteIfExists()`를 호출해 지운다.
+
+관련 파일: `domain/Post.java`, `service/PostService.java`, `service/FileStorageService.java`
+
+### 5. MultipartFile과 파일 저장 과정
+
+`MultipartFile`은 업로드된 첨부파일 하나를 다루는 인터페이스이다. `FileStorageService.store()`는 파일 이름·확장자·크기 등을 검사하고 UUID 파일명과 저장 경로를 만든다. 이후 `getInputStream()`으로 파일 내용을 읽고 `Files.copy()`로 저장한다. 반환된 첨부파일 정보는 `PostService.create()`에서 게시글과 함께 DB에 저장한다.
+
+관련 파일: `service/FileStorageService.java`, `service/PostService.java`
+
+### 6. UUID 파일명을 사용하는 이유
+
+원본 이름으로 저장하면 같은 이름의 파일이 기존 파일을 덮어쓸 수 있다. UUID 이름은 이런 충돌 가능성을 줄인다. 원본 이름은 DB에 따로 보관해 다운로드할 때 사용한다.
+
+관련 파일·메서드: `service/FileStorageService.java`의 `store()`, `controller/AttachmentController.java`의 `download()`
+
+### 7. 다운로드 응답
+
+`Resource`는 파일을 읽고 다루기 위한 것으로, `FileStorageService.load()`에서는 `PathResource`를 반환한다. `ResponseEntity`는 HTTP 상태 코드·헤더·본문을 담으며, `download()`에서는 본문에 파일 리소스를 넣는다. `Content-Disposition`의 `attachment`는 다운로드를 안내하고, `filename`은 저장할 파일명을 알려준다.
+
+관련 파일·메서드: `service/FileStorageService.java`의 `load()`, `controller/AttachmentController.java`의 `download()`
+
+### 8. normalize()와 startsWith()
+
+`normalize()`는 경로의 `.`과 `..`를 정리하고, `startsWith(uploadDir)`는 그 경로가 업로드 폴더 안인지 확인한다. 지정한 폴더 밖에 파일이 저장되는 것을 막기 위한 검사이다.
+
+관련 파일·메서드: `service/FileStorageService.java`의 `store()`
+
+### 코드 주석
+
+## Customizing
+
+### Text
+
+### Style
+
+### UI/Data
+
+## New Feature
+
+## Testing & Deployment
+
+컴파일, DB 연결, 게시글 작성·조회, JPG 업로드와 브라우저의 다운로드 완료 표시를 확인했다. `uploads`의 UUID 파일명과 DB의 원본 이름·저장 이름·게시글 ID도 확인했다.
+
+### 초기 화면
+
+![초기 화면](results/01_sample.png)
+
+### 업로드
+
+![업로드 성공](results/02_upload.png)
+
+### 다운로드
+
+![다운로드 완료](results/03_download.png)
+
+### 이미지 미리보기
+
+### 배포
+
+## Weekly Review
+
+### 새롭게 배운 내용
+
+1. Controller, Service, Repository가 각각 요청 처리, 비즈니스 로직, DB 접근을 맡는다.
+2. DB의 첨부파일 레코드를 삭제해도 실제 파일은 별도로 삭제해야 한다.
+3. UUID로 저장 이름을 만들고 원본 이름은 따로 보관할 수 있다.
+
+### 어려웠던 점과 해결 방법
+
+`MultipartFile`에 제목과 내용도 포함되는 줄 알았는데, 코드를 보면서 파일만 받는다는 것을 알았다. DB 레코드 삭제와 실제 파일 삭제도 같은 작업인 줄 알았지만, 삭제 메서드를 따라가며 구분했다.
+
+### AI 활용 내용 및 느낀 점
+
+AI의 질문과 힌트를 보며 코드를 읽고 직접 답했다. 환경 확인과 오류 해결에 도움을 받았고, 내가 답한 내용을 README로 정리하도록 요청했다.
