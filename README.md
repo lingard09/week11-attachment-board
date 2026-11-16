@@ -6,8 +6,7 @@ Render URL:
 
 Spring Boot로 만든 게시판이다. 게시글 CRUD와 파일 업로드·다운로드 코드를 분석하고, 화면 수정과 이미지 미리보기를 추가하는 과제이다.
 
-- GitHub: https://github.com/lingard09/week11-attachment-board
-- Classroom 제출 저장소:
+- GitHub Classroom: https://github.com/2026-2-WebService/assign11-c01-22100159
 - 사용 기술: Java 18, Spring Boot 3.5.7, Thymeleaf, JPA, MariaDB
 
 ## Installation
@@ -120,7 +119,7 @@ Controller는 사용자의 요청을 처리하고, Service는 비즈니스 로�
 
 컴파일, DB 연결, 게시글 작성·조회, JPG 업로드와 브라우저의 다운로드 완료 표시를 확인했다. `uploads`의 UUID 파일명과 DB의 원본 이름·저장 이름·게시글 ID도 확인했다.
 
-이미지 미리보기와 없는 첨부파일 ID의 404 응답을 확인했다. 이미지 응답의 내용도 저장된 파일과 일치했다. 이미지가 아닌 파일의 다운로드·열기와 게시글 수정 후 첨부파일 유지도 직접 확인했다.
+게시글 삭제 후 목록에서 사라지는 것을 확인했다. 이미지 미리보기와 없는 첨부파일 ID의 404 응답을 확인했다. 이미지 응답의 내용도 저장된 파일과 일치했다. 이미지가 아닌 파일의 다운로드·열기와 게시글 수정 후 첨부파일 유지도 직접 확인했다.
 
 ### 초기 화면
 
