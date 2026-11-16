@@ -29,32 +29,32 @@ public class FileStorageService {
     }
 
     public Attachment store(MultipartFile file) {
-        if (file.isEmpty()) throw new IllegalArgumentException("빈 파일은 업로드할 수 없습니다.");
+        if (file.isEmpty()) throw new IllegalArgumentException("빈 파일은 업로드할 수 없습니다."); // 내용이 없는 파일은 저장하지 않도록 예외를 발생시킨다.
         String original = file.getOriginalFilename();
-        if (original == null || original.isBlank() || original.contains("/") || original.contains("\\") || original.contains(".."))
+        if (original == null || original.isBlank() || original.contains("/") || original.contains("\\") || original.contains("..")) // 파일 이름이 없거나 경로를 조작할 수 있는 문자가 포함되면 거부한다.
             throw new IllegalArgumentException("잘못된 파일 이름입니다.");
-        if (original.length() > 240) throw new IllegalArgumentException("파일 이름이 너무 깁니다.");
-        int dot = original.lastIndexOf('.');
-        String ext = dot < 0 ? "" : original.substring(dot + 1).toLowerCase(Locale.ROOT);
-        if (!ALLOWED.contains(ext)) throw new IllegalArgumentException("허용 형식: jpg, jpeg, png, gif, pdf, txt");
-        if (file.getSize() > 10L * 1024 * 1024) throw new IllegalArgumentException("파일은 10MB 이하만 가능합니다.");
-        String stored = UUID.randomUUID() + "." + ext;
-        Path target = uploadDir.resolve(stored).normalize();
-        if (!target.startsWith(uploadDir)) throw new IllegalArgumentException("잘못된 파일 경로입니다.");
-        try (InputStream input = file.getInputStream()) {
-            Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
+        if (original.length() > 240) throw new IllegalArgumentException("파일 이름이 너무 깁니다."); //너무 긴 파일 이름은 저장하지 않도록 제한한다.
+        int dot = original.lastIndexOf('.'); // 파일명 중간의 점과 구분하기 위해 마지막 점의 위치를 찾는다.
+        String ext = dot < 0 ? "" : original.substring(dot + 1).toLowerCase(Locale.ROOT); // 마지막 점 뒤의 확장자를 소문자로 통일하고, 점이 없으면 빈 문자열로 처리한다.
+        if (!ALLOWED.contains(ext)) throw new IllegalArgumentException("허용 형식: jpg, jpeg, png, gif, pdf, txt"); // 허용된 확장자가 아니면 업로드를 거부한다.
+        if (file.getSize() > 10L * 1024 * 1024) throw new IllegalArgumentException("파일은 10MB 이하만 가능합니다."); // 서버 자원을 과도하게 사용하지 않도록 파일 크기를 10MB 이하로 제한한다.
+        String stored = UUID.randomUUID() + "." + ext; // 파일명 충돌을 줄이기 위해 UUID에 확장자를 붙여 저장 이름을 만든다.
+        Path target = uploadDir.resolve(stored).normalize(); // 업로드 폴더와 저장 파일명을 합치고 경로를 정리한다.
+        if (!target.startsWith(uploadDir)) throw new IllegalArgumentException("잘못된 파일 경로입니다."); // 저장 경로가 업로드 폴더 밖이면 거부한다.
+        try (InputStream input = file.getInputStream()) { // 업로드된 파일을 읽는 스트림을 열고, 블록이 끝나면 자동으로 닫는다.
+            Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING); // 읽은 파일 내용을 서버의 저장 경로에 복사한다.
             // Teaching sample: MIME type is inferred by extension, not trusted from request headers.
-            String contentType = switch (ext) {
+            String contentType = switch (ext) { // 확장자에 맞는 MIME 타입을 정한다.
                 case "jpg", "jpeg" -> "image/jpeg";
                 case "png" -> "image/png";
                 case "gif" -> "image/gif";
                 case "pdf" -> "application/pdf";
                 default -> "text/plain";
             };
-            return new Attachment(original, stored, contentType, file.getSize());
+            return new Attachment(original, stored, contentType, file.getSize()); // 저장한 파일의 정보를 Attachment 객체에 담아 반환한다.
         } catch (IOException e) {
-            try { Files.deleteIfExists(target); } catch (IOException ignored) {}
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장 실패", e);
+            try { Files.deleteIfExists(target); } catch (IOException ignored) {} // 저장 도중 남았을 수 있는 불완전한 파일을 삭제한다.
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장 실패", e); // 파일 저장 실패를 서버 오류(500)로 알린다.
         }
     }
 
